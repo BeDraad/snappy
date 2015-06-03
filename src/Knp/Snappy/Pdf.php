@@ -12,14 +12,17 @@ namespace Knp\Snappy;
  */
 class Pdf extends AbstractGenerator
 {
+    protected $optionsWithContentCheck = array();
+
     /**
      * {@inheritDoc}
      */
     public function __construct($binary = null, array $options = array(), array $env = null)
     {
         $this->setDefaultExtension('pdf');
+        $this->setOptionsWithContentCheck();
 
-        parent::__construct($binary, $options, $env );
+        parent::__construct($binary, $options, $env);
     }
 
     /**
@@ -29,19 +32,11 @@ class Pdf extends AbstractGenerator
      */
     protected function handleOptions(array $options = array())
     {
-        $this->hasHtmlHeader = false;
-        $this->hasHtmlFooter = false;
-        
-        if ($this->isFileHeader($options) && !$this->isFile($options['header-html'])) {
-            $options['header-html'] = $this->createTemporaryFile($options['header-html'], 'html');
-        }
-
-        if ($this->isFileFooter($options) && !$this->isFile($options['footer-html'])) {
-            $options['footer-html'] = $this->createTemporaryFile($options['footer-html'], 'html');
-        }
-
-        if ($this->isFileCover($options) && !$this->isFile($options['cover'])) {
-            $options['cover'] = $this->createTemporaryFile($options['cover'], 'html');
+        foreach ($options as $option => $value) {
+            if (in_array($option, $this->optionsWithContentCheck)) {
+                $fileContent = $this->isOptionUrl($value) ? file_get_contents($value) : $value;
+                $options[$option] = $this->createTemporaryFile($fileContent, 'html');
+            }
         }
 
         return $options;
@@ -55,43 +50,6 @@ class Pdf extends AbstractGenerator
         $options = $this->handleOptions($options);
 
         parent::generate($input, $output, $options, $overwrite);
-    }
-
-    /**
-     * @param array $options
-     * @return bool
-     */
-    protected function isFileHeader($options)
-    {
-        if (isset($options['header-html'])) {
-            return !$this->isOptionUrl($options['header-html']);
-        }
-        return false;
-    }
-
-    /**
-     * @param array $options
-     * @return bool
-     */
-    protected function isFileFooter($options)
-    {
-        if (isset($options['footer-html'])) {
-            return !$this->isOptionUrl($options['footer-html']);
-        }
-        return false;
-    }
-
-    /**
-     * @param array $options
-     * @return bool
-     */
-    protected function isFileCover($options)
-    {
-        if (isset($options['cover'])) {
-            return !$this->isOptionUrl($options['cover']);
-        }
-
-        return false;
     }
 
     /**
@@ -231,5 +189,18 @@ class Pdf extends AbstractGenerator
             'viewport-size'                => null,
             'redirect-delay'               => null, // old v0.9
         ));
+    }
+
+    /**
+     * Array with options which require to store the content of the option before passing it to wkhtmltopdf
+     */
+    protected function setOptionsWithContentCheck()
+    {
+        $this->optionsWithContentCheck = array(
+            'header-html',
+            'footer-html',
+            'cover',
+            'xsl-style-sheet',
+        );
     }
 }
