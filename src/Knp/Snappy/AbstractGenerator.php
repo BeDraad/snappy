@@ -463,14 +463,8 @@ abstract class AbstractGenerator implements GeneratorInterface
      */
     protected function executeCommand($command)
     {
-        if (class_exists('Symfony\Component\Process\Process')) {
-            $process = new \Symfony\Component\Process\Process($command, NULL, $this->env);
-            if ($this->timeout !== false) {
-                $process->setTimeout($this->timeout);
-            }
-        } else {
-            $process = new Process($command, $this->env);
-        }
+
+        $process = new Process($command, $this->env);
 
         $process->run();
 
